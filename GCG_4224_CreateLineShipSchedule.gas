@@ -1,0 +1,490 @@
+Program.Sub.ScreenSU.Start
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+
+Variable.Global.sCommonX.Declare(String)
+Variable.Global.sCustNo.Declare(String)
+Variable.Global.sCustPo.Declare(String)
+Variable.Global.sSalesman.Declare(String)
+Variable.Global.sOrdNo.Declare(String)
+Variable.Global.sLineNo.Declare(String)
+Variable.Global.sLineType.Declare(String)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Sub_Main_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.ssql2.Declare(String)
+V.Local.ssqlShipRecs.Declare(String)
+V.Local.sInsSql.Declare(String)
+V.Local.sInsSql2.Declare(String)
+V.Local.sUSqlOrdLine.Declare(String)
+V.Local.sDueDate.Declare(String)
+V.Local.sSeq.Declare(String)
+V.Local.sSchdQty.Declare(String)
+V.Local.sOpenQty.Declare(String)
+V.Local.sInfo.Declare(String)
+V.Local.sCloseFlag.Declare(String,"N")
+V.Local.sPart.Declare(String)
+V.Local.sLocn.Declare(String)
+V.Local.sProdLine.Declare(String)
+V.Local.sCustNo.Declare(String)
+V.Local.sShipTo.Declare(String)
+V.Local.sCustPo.Declare(String)
+V.Local.sFiller15.Declare(String)
+V.Local.sSalesman.Declare(String)
+V.Local.sAdjFlag.Declare(String)
+V.Local.sFiller77.Declare(String)
+V.Local.iWorkLen.Declare(Long)
+V.Local.date.Declare(String)
+V.Local.time.Declare(String)
+V.Local.saddUser.Declare(String)
+V.Local.sProgram.Declare(String,"CrtShpSchd")
+V.Local.yyyy.Declare(String)
+V.Local.mm.Declare(String)
+V.Local.dd.Declare(String)
+V.Local.dbyte2.Declare(String)
+V.Local.hh.Declare(String)
+V.Local.mn.Declare(String)
+V.Local.ss.Declare(String)
+V.Local.iLen.Declare(Long)
+V.Local.sblank.Declare(String,"")
+V.Local.sZero.Declare(String,"0")
+V.Local.sdZeros.Declare(String,"00000000")
+V.Local.eofBlanket.Declare(String,"N")
+V.Local.sNeworder.Declare(String)
+V.Local.sHoldLine.Declare(String,"")
+V.Local.sDate.Declare
+V.Local.dDate.Declare
+V.Local.bDate.Declare
+
+F.Intrinsic.Control.If(V.Caller.Hook,=,12010)
+	F.Intrinsic.UI.ChangeCallerProperty(V.Passed.000001,"LOCK",0)
+	F.Intrinsic.Control.End
+
+F.Intrinsic.Control.EndIf
+
+V.Local.date.Set(V.ambient.Date)
+F.Intrinsic.String.Len(V.Local.date,V.Local.iLen)
+F.Intrinsic.String.Mid(V.Local.date,2,1,V.Local.dbyte2)
+F.Intrinsic.String.Right(V.Local.date,4,V.Local.yyyy)
+F.Intrinsic.Control.If(V.Local.iLen,"=",10)
+	F.Intrinsic.String.Left(V.Local.date,2,V.Local.mm)
+	F.Intrinsic.String.Mid(V.Local.date,4,2,V.Local.dd)
+	F.Intrinsic.String.Concat(V.Local.yyyy,V.Local.mm,V.Local.dd,V.Local.date)
+F.Intrinsic.Control.elseif(V.Local.iLen,"=",9)
+	F.Intrinsic.Control.If(V.Local.dbyte2,"=","/")
+		F.Intrinsic.String.Left(V.Local.date,1,V.Local.mm)
+		F.Intrinsic.String.Mid(V.Local.date,3,2,V.Local.dd)
+		F.Intrinsic.String.Concat(V.Local.yyyy,"0",V.Local.mm,V.Local.dd,V.Local.date)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Left(V.Local.date,2,V.Local.mm)
+		F.Intrinsic.String.Mid(V.Local.date,4,1,V.Local.dd)
+		F.Intrinsic.String.Concat(V.Local.yyyy,V.Local.mm,"0",V.Local.dd,V.Local.date)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+		F.Intrinsic.String.Left(V.Local.date,1,V.Local.mm)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Mid(V.Local.date,,1,V.Local.dd)
+		F.Intrinsic.String.Concat(V.Local.yyyy,"0",V.Local.mm,"0",V.Local.dd,V.Local.date)
+F.Intrinsic.Control.EndIf
+
+Function.Odbc.Connection!Conx.Openconnection(Variable.Ambient.pDSN,Variable.Ambient.PUser,Variable.Ambient.PPass)
+
+F.Intrinsic.Control.If(V.CALLER.HOOK,"=",48762)
+	V.Local.sNeworder.Set(V.Passed.000106)
+	F.Intrinsic.String.LPad(V.Local.sNeworder,0,7,V.Local.sNeworder)
+	V.Global.sOrdNo.Set(V.Local.sNeworder)
+	F.Intrinsic.Control.dountil(V.Local.eofBlanket,"=","Y")
+		V.Local.ssqlShipRecs.set("Select Record_no, part, qty_ordered, date_item_prom, product_line, location, ship_id from Order_lines where Order_no = '{0}' and record_no > '{1}' and record_type = 'L' and line_type = 'S'")
+		F.Intrinsic.String.Build(V.Local.ssqlShipRecs,V.local.sNewOrder,V.Local.sHoldLine,V.Local.ssqlShipRecs)
+		F.ODBC.Connection!conX.OpenRecordsetRO("rstOrderLine",V.Local.sSqlShipRecs)
+			F.Intrinsic.Control.If(V.Odbc.conX!rstOrderLine.EOF,=,True)
+				F.ODBC.conX!rstOrderLine.Close
+				V.Local.eofBlanket.Set("Y")
+			F.Intrinsic.Control.Else
+				V.Global.sLineNo.Set(V.ODBC.conX!rstOrderLine.FieldVal!Record_no)
+				V.Local.sHoldLine.Set(V.ODBC.conX!rstOrderLine.FieldVal!Record_no)
+'				V.local.sDueDate.Set(V.ODBC.conX!rstOrderLine.FieldVal!Date_item_prom)
+				F.Intrinsic.Control.If(V.ODBC.conX!rstOrderLine.FieldVal!Date_item_prom,=,"00000000")
+					V.local.sDueDate.Set(V.Passed.000005)
+					V.Local.bDate.Set(True)
+				F.Intrinsic.Control.Else
+					V.local.sDueDate.Set(V.ODBC.conX!rstOrderLine.FieldVal!Date_item_prom)
+					V.Local.bDate.Set(False)
+				F.Intrinsic.Control.EndIf
+				V.local.sSchdQty.Set(V.ODBC.conX!rstOrderLine.FieldVal!Qty_Ordered)
+				V.local.sOpenQty.Set(V.ODBC.conX!rstOrderLine.FieldVal!Qty_Ordered)
+				V.local.sPart.Set(V.ODBC.conX!rstOrderLine.FieldVal!Part)
+				V.local.sLocn.Set(V.ODBC.conX!rstOrderLine.FieldVal!Location)
+				V.local.sProdLine.Set(V.ODBC.conX!rstOrderLine.FieldVal!Product_Line)
+				V.local.sShipTo.Set(V.ODBC.conX!rstOrderLine.FieldVal!Ship_Id)
+				F.ODBC.conX!rstOrderLine.Close
+			F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.CallSub(Subgetheader)
+	V.Local.sSeq.Set("000")
+	V.Local.sInfo.Set("")
+	V.Local.sCloseFlag.Set("N")
+	V.Local.sCustNo.Set(V.Global.sCustNo)
+	V.Local.sCustPo.Set(V.Global.scustpo)
+	V.Local.sFiller15.Set("")
+	V.Local.sAdjFlag.Set("")
+	V.Local.sFiller77.Set("00000000")
+		V.Local.ssql.set("Select Order_num from order_ss_adds where order_num = '{0}' and order_line = '{1}'")
+		F.Intrinsic.String.Build(V.Local.ssql,V.Local.sNeworder,V.Global.sLineNo,V.Local.ssql)
+		F.ODBC.Connection!conX.OpenRecordsetRO("rstOrdSS",V.Local.sSql)
+			F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdSS.EOF,=,True)
+				V.Local.sInsSql.Set("Insert into order_ss_adds (order_num, order_line, due_date, seq, schd_qty, open_qty, info, close_flag, part, locn, prod_line, cust_no, shipto, cust_po, filler15, salesman, adj_flag, filler77, added_trmnl, added_date, added_time, added_user, added_pgm)values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}','{17}','{18}','{19}','{20}','{21}','{22}')")
+				F.Intrinsic.String.Build(V.Local.sInsSql,V.Local.sNeworder,V.Global.sLineNo,V.Local.sDueDate,V.Local.sSeq,V.Local.sSchdQty,V.Local.sSchdQty,V.Local.sInfo,V.Local.sCloseFlag,V.Local.sPart,V.Local.sLocn,V.Local.sProdLine,V.Global.sCustNo,V.Local.sShipTo,V.Global.sCustPo,V.Local.sFiller15,V.Global.sSalesman,V.Local.sAdjFlag,V.Local.sFiller77,V.caller.terminal,V.local.Date,V.local.time,V.caller.User,V.Local.sProgram,V.Local.sInsSql)
+						F.ODBC.Connection!Conx.Execute(V.Local.sInsSQL)
+			F.Intrinsic.Control.EndIf
+			F.odbc.conx!rstOrdSS.close
+		V.Local.ssql2.set("Select Order_no from oe_ship_sched where order_no = '{0}' and order_line = '{1}'")
+		F.Intrinsic.String.Build(V.Local.ssql2,V.Local.sNeworder,V.Global.sLineNo,V.Local.ssql2)
+		F.ODBC.Connection!conX.OpenRecordsetRO("rstOrdSS2",V.Local.sSql2)
+			F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdSS2.EOF,=,True)
+				V.Local.sInsSql2.Set("Insert into oe_ship_sched (ORDER_NO,ORDER_LINE,DATE_DUE,MULT_QTY_SEQ,QTY_SCHED,QTY_OPEN,INFO,FLAG_CLOSED,FLAG_STATUS,SYSTEM_CLOSED,STG_QTY,STG_OPEN_QTY,CUST_DUE_DATE,FILLER,DATE_LAST_SHPD,TIME_LAST_SHPD,LAST_SHPD_BY,LAST_SHPD_PGM,FLAG_CONVERTED,DATE_LAST_CHG,TIME_LAST_CHG,LAST_CHG_BY,LAST_CHG_PGM)values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}','{17}','{18}','{19}','{20}','{21}','{22}')")
+				F.Intrinsic.String.Build(V.Local.sInsSql2,V.Local.sNeworder,V.Global.sLineNo,V.Local.sDueDate,V.Local.sSeq,V.Local.sSchdQty,V.Local.sSchdQty,V.Local.sInfo,V.Local.sCloseFlag,V.Local.sblank,V.Local.sblank,V.Local.sZero,V.local.sZero,V.Local.sDueDate,V.local.sFiller15,V.Local.sdZeros,V.local.sdZeros,V.Local.sblank,V.Local.sblank,V.local.sblank,V.local.Date,V.local.time,V.caller.User,V.Local.sProgram,V.Local.sInsSql2)
+						F.ODBC.Connection!Conx.Execute(V.Local.sInsSQL2)
+			F.Intrinsic.Control.EndIf
+			F.odbc.conx!rstOrdSS2.close
+		V.Local.ssql2.set("Select Order_no from order_lines where order_no = '{0}' and record_no = '{1}'")
+		F.Intrinsic.String.Build(V.Local.ssql2,V.Local.sNeworder,V.Global.sLineNo,V.Local.ssql2)
+		F.ODBC.Connection!conX.OpenRecordsetRW("rstOrdLine",V.Local.sSql2)
+			F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdLine.EOF,=,True)
+			F.Intrinsic.Control.Else
+				F.Intrinsic.Control.If(V.Local.bDate,=,True)
+					F.Intrinsic.Date.ConvertDString(V.Passed.000005,"YYYYMMDD",V.Local.dDate)
+					F.Intrinsic.String.Format(V.Local.dDate,"MMDDYY",V.Local.sDate)
+					V.Local.sUSqlOrdLine.Set("update order_lines set flag_use_mqd = 'Y',date_item_prom = '{2}',item_promise_dt = '{3}' where order_no = '{0}' and record_no = '{1}';")
+					F.Intrinsic.String.Build(V.Local.sUSqlOrdLine,V.Local.sNeworder,V.Global.sLineNo,V.Passed.000005,V.Local.sDate,V.Local.sUSqlOrdLine)
+					F.ODBC.Connection!Conx.Execute(V.Local.sUSqlOrdLine)
+				F.Intrinsic.Control.Else
+					V.Local.sUSqlOrdLine.Set("update order_lines set flag_use_mqd = 'Y' where order_no = '{0}' and record_no = '{1}'")
+					F.Intrinsic.String.Build(V.Local.sUSqlOrdLine,V.Local.sNeworder,V.Global.sLineNo,V.Local.sUSqlOrdLine)
+					F.ODBC.Connection!Conx.Execute(V.Local.sUSqlOrdLine)
+				F.Intrinsic.Control.EndIf
+			F.Intrinsic.Control.EndIf
+			F.odbc.conx!rstOrdLine.close
+	F.Intrinsic.Control.Loop
+
+'these were modificaitons added by WAW on 09/28/2016 for Proj 4224
+F.Intrinsic.Control.elseIf(V.CALLER.HOOK,"=",17301)
+	'call the quote won loss sub
+	F.intrinsic.control.callsub(Quotewonloss)
+
+F.Intrinsic.Control.Else
+
+	V.Global.sOrdNo.Set(V.Passed.000060)
+	V.Global.sLineNo.Set(V.Passed.000051)
+	F.Intrinsic.Control.CallSub(Subgetheader)
+	V.Local.sDueDate.Set(V.Passed.000011)
+	V.Local.sSeq.Set("000")
+	V.Local.sSchdQty.Set(V.Passed.000007)
+	V.Local.sOpenQty.Set(V.Passed.000007)
+	V.Local.sInfo.Set("")
+	V.Local.sCloseFlag.Set("N")
+	F.Intrinsic.String.Concat(V.Passed.000052,V.Passed.000053,V.Local.sPart)
+	V.Local.sLocn.Set(V.passed.000054)
+	V.Local.sProdLine.Set(V.Passed.000013)
+	V.Local.sCustNo.Set(V.Global.sCustNo)
+	V.Local.sShipTo.set(V.Passed.000022)
+	V.Local.sCustPo.Set(V.Global.scustpo)
+	V.Local.sFiller15.Set("")
+	V.Local.sAdjFlag.Set("")
+	V.Local.sFiller77.Set("00000000")
+	F.Intrinsic.Control.If(V.Global.sLineType,"<>","P")
+		V.Local.ssql.set("Select Order_num from order_ss_adds where order_num = '{0}' and order_line = '{1}'")
+		F.Intrinsic.String.Build(V.Local.ssql,V.Global.sOrdNo,V.Global.sLineNo,V.Local.ssql)
+		F.ODBC.Connection!conX.OpenRecordsetRO("rstOrdSS",V.Local.sSql)
+			F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdSS.EOF,=,True)
+				V.Local.sInsSql.Set("Insert into order_ss_adds (order_num, order_line, due_date, seq, schd_qty, open_qty, info, close_flag, part, locn, prod_line, cust_no, shipto, cust_po, filler15, salesman, adj_flag, filler77, added_trmnl, added_date, added_time, added_user, added_pgm)values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}','{17}','{18}','{19}','{20}','{21}','{22}')")
+				F.Intrinsic.String.Build(V.Local.sInsSql,V.Global.sOrdNo,V.Global.sLineNo,V.Local.sDueDate,V.Local.sSeq,V.Local.sSchdQty,V.Local.sSchdQty,V.Local.sInfo,V.Local.sCloseFlag,V.Local.sPart,V.Local.sLocn,V.Local.sProdLine,V.Global.sCustNo,V.Local.sShipTo,V.Global.sCustPo,V.Local.sFiller15,V.Global.sSalesman,V.Local.sAdjFlag,V.Local.sFiller77,V.caller.terminal,V.local.Date,V.local.time,V.caller.User,V.Local.sProgram,V.Local.sInsSql)
+						F.ODBC.Connection!Conx.Execute(V.Local.sInsSQL)
+						F.odbc.conx!rstOrdSS.close
+			F.Intrinsic.Control.EndIf
+		V.Local.ssql2.set("Select Order_no from oe_ship_sched where order_no = '{0}' and order_line = '{1}'")
+		F.Intrinsic.String.Build(V.Local.ssql2,V.Global.sOrdNo,V.Global.sLineNo,V.Local.ssql2)
+		F.ODBC.Connection!conX.OpenRecordsetRO("rstOrdSS2",V.Local.sSql2)
+			F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdSS2.EOF,=,True)
+				V.Local.sInsSql2.Set("Insert into oe_ship_sched (ORDER_NO,ORDER_LINE,DATE_DUE,MULT_QTY_SEQ,QTY_SCHED,QTY_OPEN,INFO,FLAG_CLOSED,FLAG_STATUS,SYSTEM_CLOSED,STG_QTY,STG_OPEN_QTY,CUST_DUE_DATE,FILLER,DATE_LAST_SHPD,TIME_LAST_SHPD,LAST_SHPD_BY,LAST_SHPD_PGM,FLAG_CONVERTED,DATE_LAST_CHG,TIME_LAST_CHG,LAST_CHG_BY,LAST_CHG_PGM)values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}','{17}','{18}','{19}','{20}','{21}','{22}')")
+				F.Intrinsic.String.Build(V.Local.sInsSql2,V.Global.sOrdNo,V.Global.sLineNo,V.Local.sDueDate,V.Local.sSeq,V.Local.sSchdQty,V.Local.sSchdQty,V.Local.sInfo,V.Local.sCloseFlag,V.Local.sblank,V.Local.sblank,V.Local.sZero,V.local.sZero,V.Local.sDueDate,V.local.sFiller15,V.Local.sdZeros,V.local.sdZeros,V.Local.sblank,V.Local.sblank,V.local.sblank,V.local.Date,V.local.time,V.caller.User,V.Local.sProgram,V.Local.sInsSql2)
+						F.ODBC.Connection!Conx.Execute(V.Local.sInsSQL2)
+						F.odbc.conx!rstOrdSS2.close
+			F.Intrinsic.Control.EndIf
+		V.Local.ssql2.set("Select Order_no from order_lines where order_no = '{0}' and record_no = '{1}'")
+		F.Intrinsic.String.Build(V.Local.ssql2,V.Global.sOrdNo,V.Global.sLineNo,V.Local.ssql2)
+		F.ODBC.Connection!conX.OpenRecordsetRW("rstOrdLine",V.Local.sSql2)
+			F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdLine.EOF,=,True)
+			F.Intrinsic.Control.Else
+				V.Local.sUSqlOrdLine.Set("update order_lines set flag_use_mqd = 'Y' where order_no = '{0}' and record_no = '{1}'")
+				F.Intrinsic.String.Build(V.Local.sUSqlOrdLine,V.Global.sOrdNo,V.Global.sLineNo,V.Local.sUSqlOrdLine)
+						F.ODBC.Connection!Conx.Execute(V.Local.sUSqlOrdLine)
+						F.odbc.conx!rstOrdLine.close
+			F.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Sub_Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.subGetHeader.Start
+F.Intrinsic.Control.SetErrorHandler("Sub_GetHeader_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sSql.Declare(String)
+V.Local.sError.Declare(String)
+V.Local.ordlen.Declare(Long)
+V.Local.linelen.Declare(Long)
+
+F.Intrinsic.String.Len(V.Global.sOrdNo,V.Local.ordlen)
+F.Intrinsic.Control.SelectCase(V.Local.ordlen)
+	F.Intrinsic.Control.Case(1)
+		F.Intrinsic.String.Concat("000000",V.Global.sOrdNo,V.Global.sOrdNo)
+	F.Intrinsic.Control.Case(2)
+		F.Intrinsic.String.Concat("00000",V.Global.sOrdNo,V.Global.sOrdNo)
+	F.Intrinsic.Control.Case(3)
+		F.Intrinsic.String.Concat("0000",V.Global.sOrdNo,V.Global.sOrdNo)
+	F.Intrinsic.Control.Case(4)
+		F.Intrinsic.String.Concat("000",V.Global.sOrdNo,V.Global.sOrdNo)
+	F.Intrinsic.Control.Case(5)
+		F.Intrinsic.String.Concat("00",V.Global.sOrdNo,V.Global.sOrdNo)
+	F.Intrinsic.Control.Case(6)
+		F.Intrinsic.String.Concat("0",V.Global.sOrdNo,V.Global.sOrdNo)
+F.Intrinsic.Control.EndSelect
+
+F.Intrinsic.String.Len(V.Global.sLineNo,V.Local.linelen)
+F.Intrinsic.Control.SelectCase(V.Local.linelen)
+	F.Intrinsic.Control.Case(1)
+		F.Intrinsic.String.Concat("00",V.Global.slineNo,"0",V.Global.slineNo)
+	F.Intrinsic.Control.Case(2)
+		F.Intrinsic.String.Concat("0",V.Global.slineNo,"0",V.Global.slineNo)
+	F.Intrinsic.Control.Case(3)
+		F.Intrinsic.String.Concat(V.Global.slineNo,"0",V.Global.slineNo)
+F.Intrinsic.Control.EndSelect
+
+V.Local.sSql.Set("Select Customer, Customer_Po, Salesperson from Order_Header where record_no like '%A' and order_no = '")
+F.Intrinsic.String.Concat(V.Local.sSql,V.Global.sOrdNo,"'",V.Local.sSql)
+'F.Intrinsic.Debug.Stop
+
+
+F.ODBC.Connection!conX.OpenRecordsetRO("rstOrderHeader",V.Local.sSql)
+	F.Intrinsic.Control.If(V.Odbc.conX!rstOrderHeader.EOF,=,True)
+		F.ODBC.conX!rstOrderHeader.Close
+	F.Intrinsic.Control.Else
+		V.Global.sCustNo.Set(V.ODBC.conX!rstOrderHeader.FieldVal!Customer)
+		V.Global.sCustPO.Set(V.ODBC.conX!rstOrderHeader.FieldVal!Customer_Po)
+		V.Global.sSalesman.Set(V.ODBC.conX!rstOrderHeader.FieldVal!Salesperson)
+		F.ODBC.conX!rstOrderHeader.Close
+	F.Intrinsic.Control.EndIf
+
+V.Local.sSql.Set("Select Line_type from Order_Lines where order_no = '{0}' and record_no = '{1}'")
+F.Intrinsic.String.Build(V.Local.sSql,V.Global.sOrdNo,V.Global.sLineNo,V.Local.ssql)
+'F.Intrinsic.Debug.Stop
+
+
+F.ODBC.Connection!conX.OpenRecordsetRO("rstOrderLine",V.Local.sSql)
+	F.Intrinsic.Control.If(V.Odbc.conX!rstOrderLine.EOF,=,True)
+		F.ODBC.conX!rstOrderLine.Close
+	F.Intrinsic.Control.Else
+		V.Global.sLineType.Set(V.ODBC.conX!rstOrderLine.FieldVal!Line_type)
+		F.ODBC.conX!rstOrderLine.Close
+	F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Sub_getHeader_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.subsubGetHeader.End
+
+Program.Sub.QuoteWonLoss.Start
+F.Intrinsic.Control.SetErrorHandler("QuoteWonLoss_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+V.Local.ssql.Declare(String)
+V.Local.ssql2.Declare(String)
+V.Local.ssqlShipRecs.Declare(String)
+V.Local.sInsSql.Declare(String)
+V.Local.sInsSql2.Declare(String)
+V.Local.sUSqlOrdLine.Declare(String)
+V.Local.sDueDate.Declare(String)
+V.Local.sSeq.Declare(String)
+V.Local.sSchdQty.Declare(String)
+V.Local.sOpenQty.Declare(String)
+V.Local.sInfo.Declare(String)
+V.Local.sCloseFlag.Declare(String,"N")
+V.Local.sPart.Declare(String)
+V.Local.sLocn.Declare(String)
+V.Local.sProdLine.Declare(String)
+V.Local.sCustNo.Declare(String)
+V.Local.sShipTo.Declare(String)
+V.Local.sCustPo.Declare(String)
+V.Local.sFiller15.Declare(String)
+V.Local.sSalesman.Declare(String)
+V.Local.sAdjFlag.Declare(String)
+V.Local.sFiller77.Declare(String)
+V.Local.iWorkLen.Declare(Long)
+V.Local.date.Declare(String)
+V.Local.time.Declare(String)
+V.Local.saddUser.Declare(String)
+V.Local.sProgram.Declare(String,"CrtShpSchd")
+V.Local.yyyy.Declare(String)
+V.Local.mm.Declare(String)
+V.Local.dd.Declare(String)
+V.Local.dbyte2.Declare(String)
+V.Local.hh.Declare(String)
+V.Local.mn.Declare(String)
+V.Local.ss.Declare(String)
+V.Local.iLen.Declare(Long)
+V.Local.sblank.Declare(String,"")
+V.Local.sZero.Declare(String,"0")
+V.Local.sdZeros.Declare(String,"00000000")
+V.Local.eofBlanket.Declare(String,"N")
+V.Local.sNeworder.Declare(String)
+V.Local.sHoldLine.Declare(String,"")
+V.Local.sDate.Declare
+V.Local.dDate.Declare
+V.Local.bDate.Declare
+V.Local.squote.Declare(String)
+
+'set the date
+V.Local.date.Set(V.ambient.Date)
+F.Intrinsic.String.Len(V.Local.date,V.Local.iLen)
+F.Intrinsic.String.Mid(V.Local.date,2,1,V.Local.dbyte2)
+F.Intrinsic.String.Right(V.Local.date,4,V.Local.yyyy)
+F.Intrinsic.Control.If(V.Local.iLen,"=",10)
+	F.Intrinsic.String.Left(V.Local.date,2,V.Local.mm)
+	F.Intrinsic.String.Mid(V.Local.date,4,2,V.Local.dd)
+	F.Intrinsic.String.Concat(V.Local.yyyy,V.Local.mm,V.Local.dd,V.Local.date)
+F.Intrinsic.Control.elseif(V.Local.iLen,"=",9)
+	F.Intrinsic.Control.If(V.Local.dbyte2,"=","/")
+		F.Intrinsic.String.Left(V.Local.date,1,V.Local.mm)
+		F.Intrinsic.String.Mid(V.Local.date,3,2,V.Local.dd)
+		F.Intrinsic.String.Concat(V.Local.yyyy,"0",V.Local.mm,V.Local.dd,V.Local.date)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Left(V.Local.date,2,V.Local.mm)
+		F.Intrinsic.String.Mid(V.Local.date,4,1,V.Local.dd)
+		F.Intrinsic.String.Concat(V.Local.yyyy,V.Local.mm,"0",V.Local.dd,V.Local.date)
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.Else
+		F.Intrinsic.String.Left(V.Local.date,1,V.Local.mm)
+	F.Intrinsic.Control.Else
+		F.Intrinsic.String.Mid(V.Local.date,,1,V.Local.dd)
+		F.Intrinsic.String.Concat(V.Local.yyyy,"0",V.Local.mm,"0",V.Local.dd,V.Local.date)
+F.Intrinsic.Control.EndIf
+
+'set the order number
+V.Local.sNeworder.Set(V.Passed.ORDER)
+F.Intrinsic.String.LPad(V.Local.sNeworder,0,7,V.Local.sNeworder)
+V.Global.sOrdNo.Set(V.Local.sNeworder)
+V.Local.squote.Set(V.Passed.QUOTE)
+F.Intrinsic.String.LPad(V.Local.sQuote.Trim,0,7,V.Local.sQuote)
+
+F.Intrinsic.Control.dountil(V.Local.eofBlanket,"=","Y")
+	V.Local.ssqlShipRecs.set("Select Record_no, part, qty_ordered, date_item_prom, product_line, location, ship_id from Order_lines where Order_no = '{0}' and record_no > '{1}' and record_type = 'L' and line_type = 'S'")
+	F.Intrinsic.String.Build(V.Local.ssqlShipRecs,V.local.sNewOrder,V.Local.sHoldLine,V.Local.ssqlShipRecs)
+	F.ODBC.Connection!conX.OpenRecordsetRO("rstOrderLine",V.Local.sSqlShipRecs)
+		F.Intrinsic.Control.If(V.Odbc.conX!rstOrderLine.EOF,=,True)
+			F.ODBC.conX!rstOrderLine.Close
+			V.Local.eofBlanket.Set("Y")
+		F.Intrinsic.Control.Else
+			V.Global.sLineNo.Set(V.ODBC.conX!rstOrderLine.FieldVal!Record_no)
+			V.Local.sHoldLine.Set(V.ODBC.conX!rstOrderLine.FieldVal!Record_no)
+'				V.local.sDueDate.Set(V.ODBC.conX!rstOrderLine.FieldVal!Date_item_prom)
+			F.Intrinsic.Control.If(V.ODBC.conX!rstOrderLine.FieldVal!Date_item_prom,=,"00000000")
+				V.local.sDueDate.Set(V.Passed.000005)
+				V.Local.bDate.Set(True)
+			F.Intrinsic.Control.Else
+				V.local.sDueDate.Set(V.ODBC.conX!rstOrderLine.FieldVal!Date_item_prom)
+				V.Local.bDate.Set(False)
+			F.Intrinsic.Control.EndIf
+			V.local.sSchdQty.Set(V.ODBC.conX!rstOrderLine.FieldVal!Qty_Ordered)
+			V.local.sOpenQty.Set(V.ODBC.conX!rstOrderLine.FieldVal!Qty_Ordered)
+			V.local.sPart.Set(V.ODBC.conX!rstOrderLine.FieldVal!Part)
+			V.local.sLocn.Set(V.ODBC.conX!rstOrderLine.FieldVal!Location)
+			V.local.sProdLine.Set(V.ODBC.conX!rstOrderLine.FieldVal!Product_Line)
+			V.local.sShipTo.Set(V.ODBC.conX!rstOrderLine.FieldVal!Ship_Id)
+			F.ODBC.conX!rstOrderLine.Close
+		F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.CallSub(Subgetheader)
+V.Local.sSeq.Set("000")
+V.Local.sInfo.Set("")
+V.Local.sCloseFlag.Set("N")
+V.Local.sCustNo.Set(V.Global.sCustNo)
+V.Local.sCustPo.Set(V.Global.scustpo)
+V.Local.sFiller15.Set("")
+V.Local.sAdjFlag.Set("")
+V.Local.sFiller77.Set("00000000")
+	V.Local.ssql.set("Select Order_num from order_ss_adds where order_num = '{0}' and order_line = '{1}'")
+	F.Intrinsic.String.Build(V.Local.ssql,V.Local.sNeworder,V.Global.sLineNo,V.Local.ssql)
+	F.ODBC.Connection!conX.OpenRecordsetRO("rstOrdSS",V.Local.sSql)
+		F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdSS.EOF,=,True)
+			V.Local.sInsSql.Set("Insert into order_ss_adds (order_num, order_line, due_date, seq, schd_qty, open_qty, info, close_flag, part, locn, prod_line, cust_no, shipto, cust_po, filler15, salesman, adj_flag, filler77, added_trmnl, added_date, added_time, added_user, added_pgm)values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}','{17}','{18}','{19}','{20}','{21}','{22}')")
+			F.Intrinsic.String.Build(V.Local.sInsSql,V.Local.sNeworder,V.Global.sLineNo,V.Local.sDueDate,V.Local.sSeq,V.Local.sSchdQty,V.Local.sSchdQty,V.Local.sInfo,V.Local.sCloseFlag,V.Local.sPart,V.Local.sLocn,V.Local.sProdLine,V.Global.sCustNo,V.Local.sShipTo,V.Global.sCustPo,V.Local.sFiller15,V.Global.sSalesman,V.Local.sAdjFlag,V.Local.sFiller77,V.caller.terminal,V.local.Date,V.local.time,V.caller.User,V.Local.sProgram,V.Local.sInsSql)
+					F.ODBC.Connection!Conx.Execute(V.Local.sInsSQL)
+		F.Intrinsic.Control.EndIf
+		F.odbc.conx!rstOrdSS.close
+	V.Local.ssql2.set("Select Order_no from oe_ship_sched where order_no = '{0}' and order_line = '{1}'")
+	F.Intrinsic.String.Build(V.Local.ssql2,V.Local.sNeworder,V.Global.sLineNo,V.Local.ssql2)
+	F.ODBC.Connection!conX.OpenRecordsetRO("rstOrdSS2",V.Local.sSql2)
+		F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdSS2.EOF,=,True)
+			V.Local.sInsSql2.Set("Insert into oe_ship_sched (ORDER_NO,ORDER_LINE,DATE_DUE,MULT_QTY_SEQ,QTY_SCHED,QTY_OPEN,INFO,FLAG_CLOSED,FLAG_STATUS,SYSTEM_CLOSED,STG_QTY,STG_OPEN_QTY,CUST_DUE_DATE,FILLER,DATE_LAST_SHPD,TIME_LAST_SHPD,LAST_SHPD_BY,LAST_SHPD_PGM,FLAG_CONVERTED,DATE_LAST_CHG,TIME_LAST_CHG,LAST_CHG_BY,LAST_CHG_PGM)values('{0}','{1}','{2}','{3}','{4}','{5}','{6}','{7}','{8}','{9}','{10}','{11}','{12}','{13}','{14}','{15}','{16}','{17}','{18}','{19}','{20}','{21}','{22}')")
+			F.Intrinsic.String.Build(V.Local.sInsSql2,V.Local.sNeworder,V.Global.sLineNo,V.Local.sDueDate,V.Local.sSeq,V.Local.sSchdQty,V.Local.sSchdQty,V.Local.sInfo,V.Local.sCloseFlag,V.Local.sblank,V.Local.sblank,V.Local.sZero,V.local.sZero,V.Local.sDueDate,V.local.sFiller15,V.Local.sdZeros,V.local.sdZeros,V.Local.sblank,V.Local.sblank,V.local.sblank,V.local.Date,V.local.time,V.caller.User,V.Local.sProgram,V.Local.sInsSql2)
+					F.ODBC.Connection!Conx.Execute(V.Local.sInsSQL2)
+		F.Intrinsic.Control.EndIf
+		F.odbc.conx!rstOrdSS2.close
+	V.Local.ssql2.set("Select Order_no from order_lines where order_no = '{0}' and record_no = '{1}'")
+	F.Intrinsic.String.Build(V.Local.ssql2,V.Local.sNeworder,V.Global.sLineNo,V.Local.ssql2)
+	F.ODBC.Connection!conX.OpenRecordsetRW("rstOrdLine",V.Local.sSql2)
+		F.Intrinsic.Control.If(V.Odbc.ConX!rstOrdLine.EOF,=,True)
+		F.Intrinsic.Control.Else
+			F.Intrinsic.Control.If(V.Local.bDate,=,True)
+				F.Intrinsic.Date.ConvertDString(V.Passed.000005,"YYYYMMDD",V.Local.dDate)
+				F.Intrinsic.String.Format(V.Local.dDate,"MMDDYY",V.Local.sDate)
+				V.Local.sUSqlOrdLine.Set("update order_lines set flag_use_mqd = 'Y',date_item_prom = '{2}',item_promise_dt = '{3}' where order_no = '{0}' and record_no = '{1}';")
+				F.Intrinsic.String.Build(V.Local.sUSqlOrdLine,V.Local.sNeworder,V.Global.sLineNo,V.Passed.000005,V.Local.sDate,V.Local.sUSqlOrdLine)
+				F.ODBC.Connection!Conx.Execute(V.Local.sUSqlOrdLine)
+			F.Intrinsic.Control.Else
+				V.Local.sUSqlOrdLine.Set("update order_lines set flag_use_mqd = 'Y' where order_no = '{0}' and record_no = '{1}'")
+				F.Intrinsic.String.Build(V.Local.sUSqlOrdLine,V.Local.sNeworder,V.Global.sLineNo,V.Local.sUSqlOrdLine)
+				F.ODBC.Connection!Conx.Execute(V.Local.sUSqlOrdLine)
+			F.Intrinsic.Control.EndIf
+		F.Intrinsic.Control.EndIf
+		F.odbc.conx!rstOrdLine.close
+F.Intrinsic.Control.Loop
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("QuoteWonLoss_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GAB_CreateLineShipSchedule.gas",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	F.Intrinsic.Control.End
+
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.QuoteWonLoss.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$$}$12:00:00 AM$}$False
+Program.Sub.Comments.End
+
